@@ -1,14 +1,11 @@
 package com.example.diceduelv1
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.random.Random
@@ -21,18 +18,18 @@ fun GameScreen(onBack: () -> Unit) {
     val computerScore = remember { mutableIntStateOf(0) }
     var rollCount by remember { mutableIntStateOf(0) }
     var gameOver by remember { mutableStateOf(false) }
+    val targetScore = remember { mutableIntStateOf(101) }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("H: ${humanScore.value} / C: ${computerScore.value}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("H: ${humanScore.value} / C: ${computerScore.value}", fontSize = 20.sp)
             if (gameOver) {
                 Text(
                     text = if (humanScore.value > computerScore.value) "You Win!" else "You Lose!",
                     fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
                     color = if (humanScore.value > computerScore.value) Color.Green else Color.Red
                 )
             }
@@ -66,7 +63,7 @@ fun GameScreen(onBack: () -> Unit) {
                     computerTurn(computerDice, computerScore)
                     rollCount = 0
 
-                    if (humanScore.value >= 101 || computerScore.value >= 101) {
+                    if (humanScore.value >= targetScore.value || computerScore.value >= targetScore.value) {
                         gameOver = true
                     }
                 },
@@ -84,7 +81,6 @@ fun GameScreen(onBack: () -> Unit) {
     }
 }
 
-// Computer AI - Simulates the computer's turn
 fun computerTurn(computerDice: MutableState<List<Int>>, computerScore: MutableState<Int>) {
     var rolls = 0
     while (rolls < 3) {

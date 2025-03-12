@@ -20,7 +20,7 @@ fun DiceDuelGame() {
     var screenState by remember { mutableStateOf("menu") }
 
     when (screenState) {
-        "menu" -> MainMenu { screenState = it }
+        "menu" -> MainMenuScreen { screenState = it }
         "game" -> GameScreen { screenState = "menu" }
         "about" -> AboutScreen { screenState = "menu" }
     }

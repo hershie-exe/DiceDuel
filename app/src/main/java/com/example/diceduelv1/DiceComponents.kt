@@ -11,7 +11,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// Displays dice row for human or computer
 @Composable
 fun DiceRow(player: String, dice: List<Int>) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -24,7 +23,6 @@ fun DiceRow(player: String, dice: List<Int>) {
     }
 }
 
-// Displays individual dice images
 @Composable
 fun DiceImage(number: Int) {
     Image(
@@ -34,10 +32,8 @@ fun DiceImage(number: Int) {
     )
 }
 
-// Maps dice values to drawable images
 fun getDiceImage(number: Int): Int {
     return when (number) {
-        1 -> R.drawable.die1
         2 -> R.drawable.die2
         3 -> R.drawable.die3
         4 -> R.drawable.die4
