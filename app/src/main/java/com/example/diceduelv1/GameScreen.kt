@@ -30,7 +30,20 @@ fun GameScreen(onBack: () -> Unit) {
     val gameOver = remember { mutableStateOf(false) }
     val selectedDice = remember { mutableStateOf(mutableSetOf<Int>()) }
     val showRerollPopup = remember { mutableStateOf(false) }
+    val showGameOverPopup = remember { mutableStateOf(false) }
     val targetScore = 101
+
+    val resetGame = {
+        humanDice.value = List(5) { Random.nextInt(1, 7) }
+        computerDice.value = List(5) { Random.nextInt(1, 7) }
+        humanScore.value = 0
+        computerScore.value = 0
+        rollCount.value = 0
+        rerollCount.value = 0
+        selectedDice.value.clear()
+        gameOver.value = false
+        showGameOverPopup.value = false
+    }
 
     val endTurn = {
         humanScore.value += humanDice.value.sum()
@@ -41,6 +54,7 @@ fun GameScreen(onBack: () -> Unit) {
 
         if (humanScore.value >= targetScore || computerScore.value >= targetScore) {
             gameOver.value = true
+            showGameOverPopup.value = true
         }
     }
 
@@ -124,8 +138,12 @@ fun GameScreen(onBack: () -> Unit) {
 
             PixelButton("BACK TO MENU", onClick = onBack)
 
-            if (gameOver.value) {
-                PixelText(if (humanScore.value > computerScore.value) "YOU WIN!" else "YOU LOSE!", fontSize = 32.sp)
+            if (showGameOverPopup.value) {
+                GameOverPopup(
+                    isWin = humanScore.value > computerScore.value,
+                    onReplay = resetGame,
+                    onBack = onBack
+                )
             }
         }
     }

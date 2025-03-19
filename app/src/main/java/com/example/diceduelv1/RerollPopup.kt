@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
 @Composable
 fun RerollPopup(
@@ -21,45 +23,54 @@ fun RerollPopup(
     onCancel: () -> Unit,
     rerollCount: Int
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize().background(Color(0xAA000000)),
-        contentAlignment = Alignment.Center
+    Dialog(
+        onDismissRequest = { /* No-op to prevent dismissal on outside click */ },
+        properties = DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false
+        )
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFFE587A4),
-                            Color(0xFFF5E6EB),
-                            Color(0xFFE7B7D4),
-                            Color(0xFFFFD1E3),
-                            Color(0xFFF8C8DC)
-                        )
-                    )
-                ),
+            modifier = Modifier.fillMaxSize().background(Color(0xAA000000)),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-                PixelText("REROLL?", fontSize = 28.sp)
-                PixelText("ATTEMPT", fontSize = 22.sp)
-                PixelText("$rerollCount/2", fontSize = 24.sp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFFE587A4),
+                                Color(0xFFF5E6EB),
+                                Color(0xFFE7B7D4),
+                                Color(0xFFFFD1E3),
+                                Color(0xFFF8C8DC)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+                    PixelText("REROLL?", fontSize = 28.sp)
+                    PixelText("ATTEMPT", fontSize = 22.sp)
+                    PixelText("$rerollCount/2", fontSize = 24.sp)
 
-                Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        PixelText("YES", fontSize = 20.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Image(painter = painterResource(id = R.drawable.die3), contentDescription = "Yes Dice", modifier = Modifier.size(75.dp).clickable(onClick = onConfirm))
-                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            PixelText("YES", fontSize = 20.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Image(painter = painterResource(id = R.drawable.die3), contentDescription = "Yes Dice", modifier = Modifier.size(75.dp).clickable(onClick = onConfirm))
+                        }
 
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        PixelText("NO", fontSize = 20.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Image(painter = painterResource(id = R.drawable.die6), contentDescription = "No Dice", modifier = Modifier.size(75.dp).clickable(onClick = onCancel))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            PixelText("NO", fontSize = 20.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Image(painter = painterResource(id = R.drawable.die6), contentDescription = "No Dice", modifier = Modifier.size(75.dp).clickable(onClick = onCancel))
+                        }
                     }
                 }
             }
