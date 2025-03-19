@@ -14,12 +14,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.random.Random
-
+import androidx.compose.ui.graphics.graphicsLayer
 
 @Composable
 fun GameScreen(onBack: () -> Unit) {
@@ -28,18 +26,40 @@ fun GameScreen(onBack: () -> Unit) {
     val humanScore = remember { mutableIntStateOf(0) }
     val computerScore = remember { mutableIntStateOf(0) }
     val rollCount = remember { mutableIntStateOf(0) }
-    val gameOver = remember { mutableStateOf(false) }
-    val targetScore = 101
     val rerollCount = remember { mutableIntStateOf(0) }
+    val gameOver = remember { mutableStateOf(false) }
     val selectedDice = remember { mutableStateOf(mutableSetOf<Int>()) }
+    val showRerollPopup = remember { mutableStateOf(false) }
+    val targetScore = 101
 
-    // Pink gradient background
+    val endTurn = {
+        humanScore.value += humanDice.value.sum()
+        computerTurn(computerDice, computerScore)
+        rollCount.value = 0
+        rerollCount.value = 0
+        selectedDice.value.clear()
+
+        if (humanScore.value >= targetScore || computerScore.value >= targetScore) {
+            gameOver.value = true
+        }
+    }
+
+    val rerollDice = {
+        humanDice.value = List(5) {
+            if (selectedDice.value.contains(it)) humanDice.value[it] else Random.nextInt(1, 7)
+        }
+        rollCount.value++
+        rerollCount.value++
+
+        if (rollCount.value >= 3) endTurn()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(
+                    listOf(
                         Color(0xFFE587A4), Color(0xFFF5E6EB), Color(0xFFE7B7D4),
                         Color(0xFFFFD1E3), Color(0xFFF8C8DC)
                     )
@@ -47,104 +67,70 @@ fun GameScreen(onBack: () -> Unit) {
             )
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Computer Score Display
             PixelText("COMPUTER", fontSize = 24.sp)
             PixelText("SCORE", fontSize = 18.sp)
             PixelText("${computerScore.value}/$targetScore", fontSize = 22.sp)
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Computer Dice
-            DiceGrid(
-                dice = computerDice.value,
-                selectedDice = emptySet(),
-                onDiceSelected = { },
-                isSelectable = false
-            )
+            DiceGrid(dice = computerDice.value, selectedDice = emptySet(), onDiceSelected = {}, isSelectable = false)
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Player Dice
+            if (showRerollPopup.value) {
+                RerollPopup(
+                    rerollCount = rerollCount.value,
+                    onConfirm = {
+                        rerollDice()
+                        showRerollPopup.value = false
+                    },
+                    onCancel = { showRerollPopup.value = false }
+                )
+            }
+
             DiceGrid(
                 dice = humanDice.value,
                 selectedDice = selectedDice.value,
                 onDiceSelected = { index ->
-                    if (rerollCount.value < 2) {
-                        if (selectedDice.value.contains(index)) {
-                            selectedDice.value.remove(index)
-                        } else {
-                            selectedDice.value.add(index)
-                        }
+                    if (rerollCount.value < 2 && rollCount.value < 3) {
+                        if (selectedDice.value.contains(index)) selectedDice.value.remove(index) else selectedDice.value.add(index)
                     }
                 },
-                isSelectable = true
+                isSelectable = rollCount.value < 3 && rerollCount.value < 2
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Player Score Display
             PixelText("PLAYER", fontSize = 24.sp)
             PixelText("SCORE", fontSize = 18.sp)
             PixelText("${humanScore.value}/$targetScore", fontSize = 22.sp)
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Game Controls - THROW and SCORE buttons side by side
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                PixelButton(
-                    text = "THROW",
-                    onClick = {
-                        if (rollCount.value < 3) {
-                            humanDice.value = List(5) {
-                                if (selectedDice.value.contains(it)) humanDice.value[it]
-                                else Random.nextInt(1, 7)
-                            }
-                            rollCount.value++
-                            rerollCount.value++
-                        }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                PixelButton("THROW", onClick = {
+                    if (rollCount.value < 3 && rerollCount.value < 2) {
+                        showRerollPopup.value = true
                     }
-                )
+                }, enabled = rollCount.value < 3 && rerollCount.value < 2)
 
-                PixelButton(
-                    text = "SCORE",
-                    onClick = {
-                        humanScore.value += humanDice.value.sum()
-                        computerTurn(computerDice, computerScore)
-                        rollCount.value = 0
-                        rerollCount.value = 0
-                        selectedDice.value.clear()
-
-                        if (humanScore.value >= targetScore || computerScore.value >= targetScore) {
-                            gameOver.value = true
-                        }
-                    }
-                )
+                PixelButton("SCORE", onClick = endTurn, enabled = !gameOver.value && rollCount.value < 3)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Back Button
-            PixelButton(text = "BACK TO MENU", onClick = onBack)
+            PixelButton("BACK TO MENU", onClick = onBack)
 
             if (gameOver.value) {
-                Text(
-                    text = if (humanScore.value > computerScore.value) "YOU WIN!" else "YOU LOSE!",
-                    fontSize = 32.sp,
-                    color = if (humanScore.value > computerScore.value) Color(0xFF8BC34A) else Color(0xFFD32F2F),
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
+                PixelText(if (humanScore.value > computerScore.value) "YOU WIN!" else "YOU LOSE!", fontSize = 32.sp)
             }
         }
     }
 }
+
 
 // Dice Grid Layout (3 Dice on Top, 2 Dice Below)
 @Composable
@@ -253,11 +239,16 @@ fun PixelText(text: String, fontSize: androidx.compose.ui.unit.TextUnit) {
 
 // Pixel-Style Button
 @Composable
-fun PixelButton(text: String, onClick: () -> Unit) {
+fun PixelButton(
+    text: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true
+) {
     Box(
         modifier = Modifier
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(12.dp)
+            .alpha(if (enabled) 1f else 0.5f)
     ) {
         PixelText(text, fontSize = 20.sp)
     }
@@ -281,4 +272,11 @@ fun computerTurn(computerDice: MutableState<List<Int>>, computerScore: MutableSt
 
     computerDice.value = bestRoll
     computerScore.value += bestScore
+}
+
+// Extension function to add alpha support for Modifier
+fun Modifier.alpha(alpha: Float): Modifier {
+    return this.then(
+        Modifier.graphicsLayer(alpha = alpha)
+    )
 }
