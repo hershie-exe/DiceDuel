@@ -58,6 +58,12 @@ fun GameScreen(onBack: () -> Unit) {
         }
     }
 
+    val throwDice = {
+        humanDice.value = List(5) { Random.nextInt(1, 7) }
+        rollCount.value++
+        if (rollCount.value >= 3) endTurn()
+    }
+
     val rerollDice = {
         humanDice.value = List(5) {
             if (selectedDice.value.contains(it)) humanDice.value[it] else Random.nextInt(1, 7)
@@ -81,7 +87,9 @@ fun GameScreen(onBack: () -> Unit) {
             )
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             PixelText("COMPUTER", fontSize = 24.sp)
@@ -125,11 +133,17 @@ fun GameScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                PixelButton("THROW", onClick = {
-                    if (rollCount.value < 3 && rerollCount.value < 2) {
-                        showRerollPopup.value = true
-                    }
-                }, enabled = rollCount.value < 3 && rerollCount.value < 2)
+                PixelButton(
+                    "THROW",
+                    onClick = {
+                        if (rollCount.value == 0) {
+                            throwDice()
+                        } else if (rollCount.value < 3 && rerollCount.value < 2) {
+                            showRerollPopup.value = true
+                        }
+                    },
+                    enabled = rollCount.value < 3 // Disables after 3 throws
+                )
 
                 PixelButton("SCORE", onClick = endTurn, enabled = !gameOver.value && rollCount.value < 3)
             }
