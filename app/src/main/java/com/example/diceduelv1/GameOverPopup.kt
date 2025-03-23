@@ -26,22 +26,41 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun GameOverPopup(
-    isWin: Boolean,
+    isWin: Boolean?, // Nullable for tie
     onReplay: () -> Unit,
     onBack: () -> Unit
 ) {
-    // Create the transition state outside of the remember block
     val visibleState = remember { MutableTransitionState(false) }
 
-    // Use LaunchedEffect separately
     LaunchedEffect(Unit) {
         delay(200)
         visibleState.targetState = true
     }
 
-    // Use Dialog for better positioning and system behavior
+    // Gradient background based on result
+    val gradientColors = when (isWin) {
+        true -> listOf(
+            Color(0xFF8DC891), Color(0xFFD1F0D3),
+            Color(0xFF8CD9A0), Color(0xFFE8F8E9), Color(0xFFB8E8C5)
+        )
+        false -> listOf(
+            Color(0xFFE587A4), Color(0xFFF5E6EB),
+            Color(0xFFE7B7D4), Color(0xFFFFD1E3), Color(0xFFF8C8DC)
+        )
+        null -> listOf(
+            Color(0xFFB39DDB), Color(0xFFD1C4E9),
+            Color(0xFFEDE7F6), Color(0xFFF3E5F5), Color(0xFFE1BEE7)
+        )
+    }
+
+    val outcomeImage = when (isWin) {
+        true -> R.drawable.youwin
+        false -> R.drawable.youlose
+        null -> R.drawable.tie // make sure tie.png or tie drawable exists
+    }
+
     Dialog(
-        onDismissRequest = { /* No-op to prevent dismissal on outside click */ },
+        onDismissRequest = {},
         properties = DialogProperties(
             dismissOnBackPress = false,
             dismissOnClickOutside = false,
@@ -51,12 +70,12 @@ fun GameOverPopup(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xAA000000)), // Semi-transparent overlay
+                .background(Color(0xAA000000)),
             contentAlignment = Alignment.Center
         ) {
             AnimatedVisibility(
                 visibleState = visibleState,
-                enter = fadeIn(animationSpec = tween(500)) +
+                enter = fadeIn(tween(500)) +
                         scaleIn(initialScale = 0.8f, animationSpec = tween(500)) +
                         expandVertically(expandFrom = Alignment.CenterVertically)
             ) {
@@ -64,33 +83,23 @@ fun GameOverPopup(
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    if (isWin) Color(0xFF8DC891) else Color(0xFFE587A4), // Green for win, pink for lose
-                                    if (isWin) Color(0xFFD1F0D3) else Color(0xFFF5E6EB),
-                                    if (isWin) Color(0xFF8CD9A0) else Color(0xFFE7B7D4),
-                                    if (isWin) Color(0xFFE8F8E9) else Color(0xFFFFD1E3),
-                                    if (isWin) Color(0xFFB8E8C5) else Color(0xFFF8C8DC)
-                                )
-                            )
-                        ),
+                        .background(Brush.verticalGradient(gradientColors)),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(24.dp)
                     ) {
-                        // "You Win" or "You Lose" Image
+                        // 🎯 Main Image (larger size, centered)
                         Image(
-                            painter = painterResource(if (isWin) R.drawable.youwin else R.drawable.youlose),
-                            contentDescription = if (isWin) "You Win" else "You Lose",
-                            modifier = Modifier.size(150.dp)
+                            painter = painterResource(id = outcomeImage),
+                            contentDescription = "Outcome Image",
+                            modifier = Modifier.size(220.dp) // ⬅️ Increased size for emphasis
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Replay and Back to Menu Buttons
+                        // 🎮 Action buttons
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
@@ -124,4 +133,4 @@ fun GameOverPopup(
             }
         }
     }
-} 
+}

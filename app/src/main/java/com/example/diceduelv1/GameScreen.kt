@@ -1,8 +1,6 @@
 package com.example.diceduelv1
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -20,7 +18,13 @@ import kotlin.random.Random
 import androidx.compose.ui.graphics.graphicsLayer
 
 @Composable
-fun GameScreen(onBack: () -> Unit) {
+fun GameScreen(
+    onBack: () -> Unit,
+    targetScore: Int // ✅ Now passed in from MainActivity or Settings
+) {
+    val humanWins = remember { mutableIntStateOf(0) }
+    val computerWins = remember { mutableIntStateOf(0) }
+
     val humanDice = remember { mutableStateOf(List(5) { Random.nextInt(1, 7) }) }
     val computerDice = remember { mutableStateOf(List(5) { Random.nextInt(1, 7) }) }
     val humanScore = remember { mutableIntStateOf(0) }
@@ -28,10 +32,10 @@ fun GameScreen(onBack: () -> Unit) {
     val rollCount = remember { mutableIntStateOf(0) }
     val rerollCount = remember { mutableIntStateOf(0) }
     val gameOver = remember { mutableStateOf(false) }
+    val showGameOverPopup = remember { mutableStateOf(false) }
+    val isTie = remember { mutableStateOf(false) }
     val selectedDice = remember { mutableStateOf(mutableSetOf<Int>()) }
     val showRerollPopup = remember { mutableStateOf(false) }
-    val showGameOverPopup = remember { mutableStateOf(false) }
-    val targetScore = 101
 
     val resetGame = {
         humanDice.value = List(5) { Random.nextInt(1, 7) }
@@ -43,6 +47,7 @@ fun GameScreen(onBack: () -> Unit) {
         selectedDice.value.clear()
         gameOver.value = false
         showGameOverPopup.value = false
+        isTie.value = false
     }
 
     val endTurn = {
@@ -55,6 +60,12 @@ fun GameScreen(onBack: () -> Unit) {
         if (humanScore.value >= targetScore || computerScore.value >= targetScore) {
             gameOver.value = true
             showGameOverPopup.value = true
+
+            when {
+                humanScore.value > computerScore.value -> humanWins.value += 1
+                computerScore.value > humanScore.value -> computerWins.value += 1
+                else -> isTie.value = true
+            }
         }
     }
 
@@ -92,6 +103,17 @@ fun GameScreen(onBack: () -> Unit) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                PixelText("PLAYER:${humanWins.value}", fontSize = 18.sp)
+                Spacer(modifier = Modifier.width(12.dp))
+                PixelText("COMPUTER:${computerWins.value}", fontSize = 18.sp)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             PixelText("COMPUTER", fontSize = 24.sp)
             PixelText("SCORE", fontSize = 18.sp)
             PixelText("${computerScore.value}/$targetScore", fontSize = 22.sp)
@@ -118,7 +140,10 @@ fun GameScreen(onBack: () -> Unit) {
                 selectedDice = selectedDice.value,
                 onDiceSelected = { index ->
                     if (rerollCount.value < 2 && rollCount.value < 3) {
-                        if (selectedDice.value.contains(index)) selectedDice.value.remove(index) else selectedDice.value.add(index)
+                        if (selectedDice.value.contains(index))
+                            selectedDice.value.remove(index)
+                        else
+                            selectedDice.value.add(index)
                     }
                 },
                 isSelectable = rollCount.value < 3 && rerollCount.value < 2
@@ -142,7 +167,7 @@ fun GameScreen(onBack: () -> Unit) {
                             showRerollPopup.value = true
                         }
                     },
-                    enabled = rollCount.value < 3 // Disables after 3 throws
+                    enabled = rollCount.value < 3
                 )
 
                 PixelButton("SCORE", onClick = endTurn, enabled = !gameOver.value && rollCount.value < 3)
@@ -154,7 +179,11 @@ fun GameScreen(onBack: () -> Unit) {
 
             if (showGameOverPopup.value) {
                 GameOverPopup(
-                    isWin = humanScore.value > computerScore.value,
+                    isWin = when {
+                        humanScore.value > computerScore.value -> true
+                        computerScore.value > humanScore.value -> false
+                        else -> null
+                    },
                     onReplay = resetGame,
                     onBack = onBack
                 )
