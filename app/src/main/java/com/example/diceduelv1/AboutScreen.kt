@@ -94,4 +94,3 @@ fun AboutScreen(onBack: () -> Unit) {
     }
 }
 
-git commit -m "made change in about screen"
