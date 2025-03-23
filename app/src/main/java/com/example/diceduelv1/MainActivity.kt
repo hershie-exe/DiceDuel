@@ -2,6 +2,7 @@ package com.example.diceduelv1
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 
@@ -16,10 +17,11 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun DiceDuelGame() {
-    var screenState by remember { mutableStateOf("menu") }
+    // Use rememberSaveable instead of remember to persist state across configuration changes
+    var screenState by rememberSaveable { mutableStateOf("menu") }
 
-    // 🎯 Target score state shared between screens
-    var targetScore by remember { mutableIntStateOf(101) }
+    // Also use rememberSaveable for targetScore
+    var targetScore by rememberSaveable { mutableIntStateOf(101) }
 
     when (screenState) {
         "menu" -> MainMenuScreen { screenState = it }

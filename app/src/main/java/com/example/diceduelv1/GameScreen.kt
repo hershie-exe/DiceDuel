@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -16,26 +17,47 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.random.Random
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.Alignment.Companion.CenterVertically
+import androidx.activity.compose.BackHandler
 
 @Composable
 fun GameScreen(
     onBack: () -> Unit,
-    targetScore: Int // ✅ Now passed in from MainActivity or Settings
+    targetScore: Int
 ) {
-    val humanWins = remember { mutableIntStateOf(0) }
-    val computerWins = remember { mutableIntStateOf(0) }
+    // Using rememberSaveable instead of ViewModel to persist state across configuration changes
+    val humanWins = rememberSaveable { mutableIntStateOf(0) }
+    val computerWins = rememberSaveable { mutableIntStateOf(0) }
+    val humanDice = rememberSaveable { mutableStateOf(List(5) { Random.nextInt(1, 7) }) }
+    val computerDice = rememberSaveable { mutableStateOf(List(5) { Random.nextInt(1, 7) }) }
+    val humanScore = rememberSaveable { mutableIntStateOf(0) }
+    val computerScore = rememberSaveable { mutableIntStateOf(0) }
+    val rollCount = rememberSaveable { mutableIntStateOf(0) }
+    val rerollCount = rememberSaveable { mutableIntStateOf(0) }
+    val gameOver = rememberSaveable { mutableStateOf(false) }
+    val showGameOverPopup = rememberSaveable { mutableStateOf(false) }
+    val isTie = rememberSaveable { mutableStateOf(false) }
+    val selectedDice = rememberSaveable { mutableStateOf(mutableSetOf<Int>()) }
+    val showRerollPopup = rememberSaveable { mutableStateOf(false) }
 
-    val humanDice = remember { mutableStateOf(List(5) { Random.nextInt(1, 7) }) }
-    val computerDice = remember { mutableStateOf(List(5) { Random.nextInt(1, 7) }) }
-    val humanScore = remember { mutableIntStateOf(0) }
-    val computerScore = remember { mutableIntStateOf(0) }
-    val rollCount = remember { mutableIntStateOf(0) }
-    val rerollCount = remember { mutableIntStateOf(0) }
-    val gameOver = remember { mutableStateOf(false) }
-    val showGameOverPopup = remember { mutableStateOf(false) }
-    val isTie = remember { mutableStateOf(false) }
-    val selectedDice = remember { mutableStateOf(mutableSetOf<Int>()) }
-    val showRerollPopup = remember { mutableStateOf(false) }
+    // Fix: Use 'by' delegate instead of '.value' to properly observe state changes
+    var isInGame by rememberSaveable { mutableStateOf(true) }
+
+    // Check if we're in landscape mode
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
+
+    // Intercept back button to use our custom back navigation
+    BackHandler(enabled = isInGame) {
+        // Handle manual back press same as pressing the back button
+        if (isInGame) {
+            // Ask for confirmation before going back to menu
+            // For simplicity, we'll just go back directly here
+            isInGame = false
+            onBack()
+        }
+    }
 
     val resetGame = {
         humanDice.value = List(5) { Random.nextInt(1, 7) }
@@ -85,6 +107,17 @@ fun GameScreen(
         if (rollCount.value >= 3) endTurn()
     }
 
+    // Custom back action that preserves state
+    val safeBack = {
+        isInGame = false
+        onBack()
+    }
+
+    // Let's ensure the game remains in the game screen during orientation changes
+    LaunchedEffect(Unit) {
+        isInGame = true
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -97,142 +130,328 @@ fun GameScreen(
                 )
             )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        if (isLandscape) {
+            // Landscape layout
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                PixelText("PLAYER:${humanWins.value}", fontSize = 18.sp)
-                Spacer(modifier = Modifier.width(12.dp))
-                PixelText("COMPUTER:${computerWins.value}", fontSize = 18.sp)
-            }
+                // Left side - Computer
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    PixelText("COMPUTER", fontSize = 24.sp)
+                    PixelText("SCORE", fontSize = 18.sp)
+                    PixelText("${computerScore.value}/$targetScore", fontSize = 22.sp)
 
-            Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-            PixelText("COMPUTER", fontSize = 24.sp)
-            PixelText("SCORE", fontSize = 18.sp)
-            PixelText("${computerScore.value}/$targetScore", fontSize = 22.sp)
+                    DiceGrid(
+                        dice = computerDice.value,
+                        selectedDice = emptySet(),
+                        onDiceSelected = {},
+                        isSelectable = false,
+                        isLandscape = true
+                    )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-            DiceGrid(dice = computerDice.value, selectedDice = emptySet(), onDiceSelected = {}, isSelectable = false)
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            if (showRerollPopup.value) {
-                RerollPopup(
-                    rerollCount = rerollCount.value,
-                    onConfirm = {
-                        rerollDice()
-                        showRerollPopup.value = false
-                    },
-                    onCancel = { showRerollPopup.value = false }
-                )
-            }
-
-            DiceGrid(
-                dice = humanDice.value,
-                selectedDice = selectedDice.value,
-                onDiceSelected = { index ->
-                    if (rerollCount.value < 2 && rollCount.value < 3) {
-                        if (selectedDice.value.contains(index))
-                            selectedDice.value.remove(index)
-                        else
-                            selectedDice.value.add(index)
+                    Row {
+                        PixelText("COMPUTER:", fontSize = 18.sp)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        PixelText("${computerWins.value}", fontSize = 18.sp)
                     }
-                },
-                isSelectable = rollCount.value < 3 && rerollCount.value < 2
-            )
+                }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                // Middle - Controls
+                Column(
+                    modifier = Modifier
+                        .weight(0.5f)
+                        .fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    PixelButton(
+                        "THROW",
+                        onClick = {
+                            if (rollCount.value == 0) {
+                                throwDice()
+                            } else if (rollCount.value < 3 && rerollCount.value < 2) {
+                                showRerollPopup.value = true
+                            }
+                        },
+                        enabled = rollCount.value < 3
+                    )
 
-            PixelText("PLAYER", fontSize = 24.sp)
-            PixelText("SCORE", fontSize = 18.sp)
-            PixelText("${humanScore.value}/$targetScore", fontSize = 22.sp)
+                    Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
+                    PixelButton(
+                        "SCORE",
+                        onClick = endTurn,
+                        enabled = !gameOver.value && rollCount.value < 3
+                    )
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                PixelButton(
-                    "THROW",
-                    onClick = {
-                        if (rollCount.value == 0) {
-                            throwDice()
-                        } else if (rollCount.value < 3 && rerollCount.value < 2) {
-                            showRerollPopup.value = true
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Use safe back instead of direct onBack
+                    PixelButton("BACK TO MENU", onClick = safeBack)
+                }
+
+                // Right side - Player
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    PixelText("PLAYER", fontSize = 24.sp)
+                    PixelText("SCORE", fontSize = 18.sp)
+                    PixelText("${humanScore.value}/$targetScore", fontSize = 22.sp)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (showRerollPopup.value) {
+                        RerollPopup(
+                            rerollCount = rerollCount.value,
+                            onConfirm = {
+                                rerollDice()
+                                showRerollPopup.value = false
+                            },
+                            onCancel = { showRerollPopup.value = false }
+                        )
+                    }
+
+                    DiceGrid(
+                        dice = humanDice.value,
+                        selectedDice = selectedDice.value,
+                        onDiceSelected = { index ->
+                            if (rerollCount.value < 2 && rollCount.value < 3) {
+                                if (selectedDice.value.contains(index))
+                                    selectedDice.value.remove(index)
+                                else
+                                    selectedDice.value.add(index)
+                            }
+                        },
+                        isSelectable = rollCount.value < 3 && rerollCount.value < 2,
+                        isLandscape = true
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row {
+                        PixelText("PLAYER:", fontSize = 18.sp)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        PixelText("${humanWins.value}", fontSize = 18.sp)
+                    }
+                }
+            }
+        } else {
+            // Portrait layout (original layout)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    PixelText("PLAYER:${humanWins.value}", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    PixelText("COMPUTER:${computerWins.value}", fontSize = 18.sp)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                PixelText("COMPUTER", fontSize = 24.sp)
+                PixelText("SCORE", fontSize = 18.sp)
+                PixelText("${computerScore.value}/$targetScore", fontSize = 22.sp)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                DiceGrid(
+                    dice = computerDice.value,
+                    selectedDice = emptySet(),
+                    onDiceSelected = {},
+                    isSelectable = false,
+                    isLandscape = false
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                if (showRerollPopup.value) {
+                    RerollPopup(
+                        rerollCount = rerollCount.value,
+                        onConfirm = {
+                            rerollDice()
+                            showRerollPopup.value = false
+                        },
+                        onCancel = { showRerollPopup.value = false }
+                    )
+                }
+
+                DiceGrid(
+                    dice = humanDice.value,
+                    selectedDice = selectedDice.value,
+                    onDiceSelected = { index ->
+                        if (rerollCount.value < 2 && rollCount.value < 3) {
+                            if (selectedDice.value.contains(index))
+                                selectedDice.value.remove(index)
+                            else
+                                selectedDice.value.add(index)
                         }
                     },
-                    enabled = rollCount.value < 3
+                    isSelectable = rollCount.value < 3 && rerollCount.value < 2,
+                    isLandscape = false
                 )
 
-                PixelButton("SCORE", onClick = endTurn, enabled = !gameOver.value && rollCount.value < 3)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                PixelText("PLAYER", fontSize = 24.sp)
+                PixelText("SCORE", fontSize = 18.sp)
+                PixelText("${humanScore.value}/$targetScore", fontSize = 22.sp)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    PixelButton(
+                        "THROW",
+                        onClick = {
+                            if (rollCount.value == 0) {
+                                throwDice()
+                            } else if (rollCount.value < 3 && rerollCount.value < 2) {
+                                showRerollPopup.value = true
+                            }
+                        },
+                        enabled = rollCount.value < 3
+                    )
+
+                    PixelButton("SCORE", onClick = endTurn, enabled = !gameOver.value && rollCount.value < 3)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Use safe back instead of direct onBack
+                PixelButton("BACK TO MENU", onClick = safeBack)
             }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            PixelButton("BACK TO MENU", onClick = onBack)
-
-            if (showGameOverPopup.value) {
-                GameOverPopup(
-                    isWin = when {
-                        humanScore.value > computerScore.value -> true
-                        computerScore.value > humanScore.value -> false
-                        else -> null
-                    },
-                    onReplay = resetGame,
-                    onBack = onBack
-                )
-            }
+        if (showGameOverPopup.value) {
+            GameOverPopup(
+                isWin = when {
+                    humanScore.value > computerScore.value -> true
+                    computerScore.value > humanScore.value -> false
+                    else -> null
+                },
+                onReplay = resetGame,
+                onBack = safeBack // Use the safe back here too
+            )
         }
     }
 }
 
-
-// Dice Grid Layout (3 Dice on Top, 2 Dice Below)
+// Updated Dice Grid Layout with landscape support
 @Composable
 fun DiceGrid(
     dice: List<Int>,
     selectedDice: Set<Int>,
     onDiceSelected: (Int) -> Unit,
-    isSelectable: Boolean
+    isSelectable: Boolean,
+    isLandscape: Boolean
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            for (i in 0 until 3) {
+    if (isLandscape) {
+        // In landscape, arrange 3x2 grid (3 rows, 2 dice per row)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 DiceImage(
-                    number = dice[i],
-                    isSelected = selectedDice.contains(i),
+                    number = dice[0],
+                    isSelected = selectedDice.contains(0),
                     isSelectable = isSelectable,
-                    onClick = { onDiceSelected(i) }
+                    onClick = { onDiceSelected(0) },
+                    size = 60.dp
+                )
+                DiceImage(
+                    number = dice[1],
+                    isSelected = selectedDice.contains(1),
+                    isSelectable = isSelectable,
+                    onClick = { onDiceSelected(1) },
+                    size = 60.dp
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DiceImage(
+                    number = dice[2],
+                    isSelected = selectedDice.contains(2),
+                    isSelectable = isSelectable,
+                    onClick = { onDiceSelected(2) },
+                    size = 60.dp
+                )
+                DiceImage(
+                    number = dice[3],
+                    isSelected = selectedDice.contains(3),
+                    isSelectable = isSelectable,
+                    onClick = { onDiceSelected(3) },
+                    size = 60.dp
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.Center) {
+                DiceImage(
+                    number = dice[4],
+                    isSelected = selectedDice.contains(4),
+                    isSelectable = isSelectable,
+                    onClick = { onDiceSelected(4) },
+                    size = 60.dp
                 )
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            for (i in 3 until 5) {
-                DiceImage(
-                    number = dice[i],
-                    isSelected = selectedDice.contains(i),
-                    isSelectable = isSelectable,
-                    onClick = { onDiceSelected(i) }
-                )
+    } else {
+        // Original portrait layout (3 dice on top, 2 below)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                for (i in 0 until 3) {
+                    DiceImage(
+                        number = dice[i],
+                        isSelected = selectedDice.contains(i),
+                        isSelectable = isSelectable,
+                        onClick = { onDiceSelected(i) },
+                        size = 70.dp
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                for (i in 3 until 5) {
+                    DiceImage(
+                        number = dice[i],
+                        isSelected = selectedDice.contains(i),
+                        isSelectable = isSelectable,
+                        onClick = { onDiceSelected(i) },
+                        size = 70.dp
+                    )
+                }
             }
         }
     }
 }
 
-// Dice Image Component
+// Updated Dice Image Component with configurable size
 @Composable
 fun DiceImage(
     number: Int,
     isSelected: Boolean,
     isSelectable: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    size: androidx.compose.ui.unit.Dp
 ) {
     Box(
         modifier = Modifier
@@ -247,7 +466,7 @@ fun DiceImage(
             painter = painterResource(id = getDiceImage(number)),
             contentDescription = "Dice $number",
             modifier = Modifier
-                .size(70.dp)
+                .size(size)
                 .padding(4.dp)
                 .then(
                     if (isSelected)
