@@ -1,3 +1,5 @@
+// Video demo link: https://drive.google.com/drive/folders/1VMIViMGuCgwnYWwy6Jcf1WoBmQTW2gkm
+
 package com.example.diceduelv1
 
 import android.os.Bundle

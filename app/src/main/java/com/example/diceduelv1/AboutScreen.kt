@@ -71,7 +71,7 @@ fun AboutScreen(onBack: () -> Unit) {
 
                     // Author info
                     PixelText(
-                        "Author: Hirushi Jayasekara (IIT ID:20232507,UOW ID: w2087743 )",
+                        "Author: Hirushi Jayasekara (IIT ID:20232507,UOW ID: w2087743)",
                         fontSize = 16.sp
                     )
 

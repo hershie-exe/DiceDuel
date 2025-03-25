@@ -120,7 +120,7 @@ fun MenuButton(text: String, onClick: () -> Unit) {
             .padding(horizontal = 24.dp)
             .clickable(onClick = onClick)
     ) {
-        // Shadow/border text (darker)
+        // Shadow/border text
         Text(
             text = text,
             fontSize = 24.sp,
@@ -129,7 +129,7 @@ fun MenuButton(text: String, onClick: () -> Unit) {
             style = TextStyle(letterSpacing = 2.sp),
             modifier = Modifier.offset(2.dp, 2.dp)
         )
-        // Foreground text (lighter)
+        // Foreground text
         Text(
             text = text,
             fontSize = 24.sp,
