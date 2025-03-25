@@ -20,36 +20,36 @@ import androidx.compose.ui.window.DialogProperties
 
 @Composable
 fun RerollPopup(
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit,
-    rerollCount: Int
+    onConfirm: () -> Unit, // Triggered when user chooses to reroll
+    onCancel: () -> Unit,  // Triggered when user cancels reroll
+    rerollCount: Int       // Current number of reroll attempts used
 ) {
+    // Detect device orientation
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
 
+    // Full-screen dialog with no dismissal by outside tap or back press
     Dialog(
-        onDismissRequest = { /* No-op to prevent dismissal on outside click */ },
+        onDismissRequest = { /* No-op to prevent dismissal */ },
         properties = DialogProperties(
             dismissOnBackPress = false,
             dismissOnClickOutside = false,
             usePlatformDefaultWidth = false
         )
     ) {
+        // Semi-transparent dark overlay background
         Box(
-            modifier = Modifier.fillMaxSize().background(Color(0xAA000000)),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xAA000000)),
             contentAlignment = Alignment.Center
         ) {
-            // Smaller popup for both orientations
+            // Popup container box with responsive width
             Box(
                 modifier = Modifier
                     .run {
-                        if (isLandscape) {
-                            // Smaller width in landscape to maintain similar proportions
-                            fillMaxWidth(0.6f)
-                        } else {
-                            // Smaller width in portrait as well
-                            fillMaxWidth(0.8f)
-                        }
+                        if (isLandscape) fillMaxWidth(0.6f)
+                        else fillMaxWidth(0.8f)
                     }
                     .clip(RoundedCornerShape(12.dp))
                     .background(
@@ -65,38 +65,46 @@ fun RerollPopup(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                // Use the same layout for both orientations - just like in the image
+                // Popup content
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(20.dp)
                 ) {
+                    // Reroll text and current attempt info
                     PixelText("REROLL?", fontSize = 24.sp)
                     PixelText("ATTEMPT", fontSize = 20.sp)
                     PixelText("$rerollCount/2", fontSize = 22.sp)
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    // YES / NO options with dice icons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
+                        // YES column
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             PixelText("YES", fontSize = 18.sp)
                             Spacer(modifier = Modifier.height(8.dp))
                             Image(
                                 painter = painterResource(id = R.drawable.die3),
                                 contentDescription = "Yes Dice",
-                                modifier = Modifier.size(60.dp).clickable(onClick = onConfirm)
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clickable(onClick = onConfirm)
                             )
                         }
 
+                        // NO column
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             PixelText("NO", fontSize = 18.sp)
                             Spacer(modifier = Modifier.height(8.dp))
                             Image(
                                 painter = painterResource(id = R.drawable.die6),
                                 contentDescription = "No Dice",
-                                modifier = Modifier.size(60.dp).clickable(onClick = onCancel)
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clickable(onClick = onCancel)
                             )
                         }
                     }

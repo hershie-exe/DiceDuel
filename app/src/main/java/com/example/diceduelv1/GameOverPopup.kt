@@ -26,18 +26,19 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun GameOverPopup(
-    isWin: Boolean?, // Nullable for tie
+    isWin: Boolean?, // true = win, false = lose, null = tie
     onReplay: () -> Unit,
     onBack: () -> Unit
 ) {
     val visibleState = remember { MutableTransitionState(false) }
 
+    // Trigger popup visibility with animation after slight delay
     LaunchedEffect(Unit) {
         delay(200)
         visibleState.targetState = true
     }
 
-    // Gradient background based on result
+    // Different background gradients based on game outcome
     val gradientColors = when (isWin) {
         true -> listOf(
             Color(0xFF8DC891), Color(0xFFD1F0D3),
@@ -53,12 +54,14 @@ fun GameOverPopup(
         )
     }
 
+    // Choose image resource based on outcome
     val outcomeImage = when (isWin) {
         true -> R.drawable.youwin
         false -> R.drawable.youlose
-        null -> R.drawable.tie // make sure tie.png or tie drawable exists
+        null -> R.drawable.tie
     }
 
+    // Fullscreen non-dismissable dialog
     Dialog(
         onDismissRequest = {},
         properties = DialogProperties(
@@ -70,9 +73,10 @@ fun GameOverPopup(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xAA000000)),
+                .background(Color(0xAA000000)), // Semi-transparent overlay
             contentAlignment = Alignment.Center
         ) {
+            // Animation: Fade + scale + expand
             AnimatedVisibility(
                 visibleState = visibleState,
                 enter = fadeIn(tween(500)) +
@@ -90,16 +94,16 @@ fun GameOverPopup(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(24.dp)
                     ) {
-                        // 🎯 Main Image (larger size, centered)
+                        // Outcome Image (Win/Lose/Tie)
                         Image(
                             painter = painterResource(id = outcomeImage),
                             contentDescription = "Outcome Image",
-                            modifier = Modifier.size(220.dp) // ⬅️ Increased size for emphasis
+                            modifier = Modifier.size(220.dp)
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // 🎮 Action buttons
+                        // Action Buttons (Replay & Menu)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly

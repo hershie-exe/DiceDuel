@@ -21,6 +21,7 @@ fun AboutScreen(onBack: () -> Unit) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
 
+    // Display a full-screen dialog that allows dismissal
     Dialog(
         onDismissRequest = onBack,
         properties = DialogProperties(
@@ -29,20 +30,22 @@ fun AboutScreen(onBack: () -> Unit) {
             usePlatformDefaultWidth = false
         )
     ) {
+        // Semi-transparent background
         Box(
             modifier = Modifier.fillMaxSize().background(Color(0xAA000000)),
             contentAlignment = Alignment.Center
         ) {
+            // Main card box with gradient background
             Box(
                 modifier = Modifier
                     .run {
                         if (isLandscape) {
-                            fillMaxWidth(0.6f)
+                            fillMaxWidth(0.6f) // Narrower width in landscape
                         } else {
-                            fillMaxWidth(0.8f)
+                            fillMaxWidth(0.8f) // Wider in portrait
                         }
                     }
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(12.dp)) // Rounded corners
                     .background(
                         Brush.verticalGradient(
                             listOf(
@@ -56,21 +59,25 @@ fun AboutScreen(onBack: () -> Unit) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
+                // Content column inside the dialog
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(24.dp)
                 ) {
+                    // Title
                     PixelText("ABOUT", fontSize = 24.sp)
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Author info
                     PixelText(
-                        "Author: Your Name (Student ID)",
+                        "Author: Hirushi Jayasekara (IIT ID:20232507,UOW ID: w2087743 )",
                         fontSize = 16.sp
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Plagiarism statement
                     PixelText(
                         "I confirm that I understand what plagiarism is and have read and understood the section on Assessment Offences in the Essential Information for Students. The work that I have submitted is entirely my own. Any work from other authors is duly referenced and acknowledged.",
                         fontSize = 14.sp
@@ -78,6 +85,7 @@ fun AboutScreen(onBack: () -> Unit) {
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    // OK Button to dismiss
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
@@ -93,4 +101,3 @@ fun AboutScreen(onBack: () -> Unit) {
         }
     }
 }
-

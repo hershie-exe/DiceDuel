@@ -26,7 +26,7 @@ fun GameScreen(
     onBack: () -> Unit,
     targetScore: Int
 ) {
-    // Using rememberSaveable instead of ViewModel to persist state across configuration changes
+    // State management for game logic and UI
     val humanWins = rememberSaveable { mutableIntStateOf(0) }
     val computerWins = rememberSaveable { mutableIntStateOf(0) }
     val humanDice = rememberSaveable { mutableStateOf(List(5) { Random.nextInt(1, 7) }) }
@@ -41,24 +41,24 @@ fun GameScreen(
     val selectedDice = rememberSaveable { mutableStateOf(mutableSetOf<Int>()) }
     val showRerollPopup = rememberSaveable { mutableStateOf(false) }
 
-    // Fix: Use 'by' delegate instead of '.value' to properly observe state changes
+    // Tracks whether user is inside the game screen
     var isInGame by rememberSaveable { mutableStateOf(true) }
 
-    // Check if we're in landscape mode
+    // Intercept physical back button
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
 
-    // Intercept back button to use our custom back navigation
+    // Intercept physical back button
     BackHandler(enabled = isInGame) {
-        // Handle manual back press same as pressing the back button
+
         if (isInGame) {
-            // Ask for confirmation before going back to menu
-            // For simplicity, we'll just go back directly here
+
             isInGame = false
             onBack()
         }
     }
 
+    // Reset game to initial state
     val resetGame = {
         humanDice.value = List(5) { Random.nextInt(1, 7) }
         computerDice.value = List(5) { Random.nextInt(1, 7) }
@@ -72,6 +72,7 @@ fun GameScreen(
         isTie.value = false
     }
 
+    // End human turn and start computer turn, check win conditions
     val endTurn = {
         humanScore.value += humanDice.value.sum()
         computerTurn(computerDice, computerScore)
@@ -91,12 +92,14 @@ fun GameScreen(
         }
     }
 
+    // First dice roll by the player
     val throwDice = {
         humanDice.value = List(5) { Random.nextInt(1, 7) }
         rollCount.value++
         if (rollCount.value >= 3) endTurn()
     }
 
+    // Reroll logic for selected dice
     val rerollDice = {
         humanDice.value = List(5) {
             if (selectedDice.value.contains(it)) humanDice.value[it] else Random.nextInt(1, 7)
@@ -107,17 +110,18 @@ fun GameScreen(
         if (rollCount.value >= 3) endTurn()
     }
 
-    // Custom back action that preserves state
+    // Safe back navigation handler
     val safeBack = {
         isInGame = false
         onBack()
     }
 
-    // Let's ensure the game remains in the game screen during orientation changes
+    // Ensure game stays on this screen even after orientation change
     LaunchedEffect(Unit) {
         isInGame = true
     }
 
+    // UI layout container
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -131,14 +135,15 @@ fun GameScreen(
             )
     ) {
         if (isLandscape) {
-            // Landscape layout
+            // Landscape layout: 3-column layout (Computer - Controls - Player)
             Row(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Left side - Computer
+
+                // Left: Computer player section
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -169,7 +174,7 @@ fun GameScreen(
                     }
                 }
 
-                // Middle - Controls
+                // Center: Game control buttons
                 Column(
                     modifier = Modifier
                         .weight(0.5f)
@@ -177,6 +182,8 @@ fun GameScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
+                    // Throw button: Rolls all dice if it's the first roll,
+                    // else opens reroll popup if user still has rerolls left
                     PixelButton(
                         "THROW",
                         onClick = {
@@ -190,7 +197,7 @@ fun GameScreen(
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
-
+                    // Score button: Ends human turn and triggers computer turn
                     PixelButton(
                         "SCORE",
                         onClick = endTurn,
@@ -199,11 +206,18 @@ fun GameScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Use safe back instead of direct onBack
-                    PixelButton("BACK TO MENU", onClick = safeBack)
+                    // Back to Menu: Center-aligned button inside a Box
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PixelButton("BACK TO MENU", onClick = safeBack)
+                    }
                 }
 
-                // Right side - Player
+                // Right: Player section in landscape
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -217,6 +231,7 @@ fun GameScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Conditional reroll popup
                     if (showRerollPopup.value) {
                         RerollPopup(
                             rerollCount = rerollCount.value,
@@ -228,6 +243,7 @@ fun GameScreen(
                         )
                     }
 
+                    // Player dice grid with reroll support
                     DiceGrid(
                         dice = humanDice.value,
                         selectedDice = selectedDice.value,
@@ -245,6 +261,7 @@ fun GameScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Player win count
                     Row {
                         PixelText("PLAYER:", fontSize = 18.sp)
                         Spacer(modifier = Modifier.width(4.dp))
@@ -253,13 +270,15 @@ fun GameScreen(
                 }
             }
         } else {
-            // Portrait layout (original layout)
+
+            // Portrait layout (single column)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Top row showing win counters
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start
@@ -271,12 +290,14 @@ fun GameScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Computer header and score
                 PixelText("COMPUTER", fontSize = 24.sp)
                 PixelText("SCORE", fontSize = 18.sp)
                 PixelText("${computerScore.value}/$targetScore", fontSize = 22.sp)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Computer dice
                 DiceGrid(
                     dice = computerDice.value,
                     selectedDice = emptySet(),
@@ -287,6 +308,7 @@ fun GameScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
+                // Reroll popup in portrait mode
                 if (showRerollPopup.value) {
                     RerollPopup(
                         rerollCount = rerollCount.value,
@@ -298,6 +320,7 @@ fun GameScreen(
                     )
                 }
 
+                // Player dice and selection
                 DiceGrid(
                     dice = humanDice.value,
                     selectedDice = selectedDice.value,
@@ -315,12 +338,14 @@ fun GameScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Player header and score
                 PixelText("PLAYER", fontSize = 24.sp)
                 PixelText("SCORE", fontSize = 18.sp)
                 PixelText("${humanScore.value}/$targetScore", fontSize = 22.sp)
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Throw and Score buttons in portrait
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     PixelButton(
                         "THROW",
@@ -339,11 +364,12 @@ fun GameScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Use safe back instead of direct onBack
+                // Back to Menu in portrait mode
                 PixelButton("BACK TO MENU", onClick = safeBack)
             }
         }
 
+        // Final Game Over popup (shown after win condition)
         if (showGameOverPopup.value) {
             GameOverPopup(
                 isWin = when {
@@ -352,23 +378,24 @@ fun GameScreen(
                     else -> null
                 },
                 onReplay = resetGame,
-                onBack = safeBack // Use the safe back here too
+                onBack = safeBack
             )
         }
     }
 }
 
-// Updated Dice Grid Layout with landscape support
+
 @Composable
 fun DiceGrid(
-    dice: List<Int>,
-    selectedDice: Set<Int>,
+    dice: List<Int>, // List of dice values (1–6)
+    selectedDice: Set<Int>,  // Indices of dice selected by human player
     onDiceSelected: (Int) -> Unit,
-    isSelectable: Boolean,
-    isLandscape: Boolean
+    isSelectable: Boolean,  // Whether the user can currently select dice
+    isLandscape: Boolean   // Layout mode: true = landscape, false = portrait
 ) {
     if (isLandscape) {
-        // In landscape, arrange 3x2 grid (3 rows, 2 dice per row)
+
+        // Landscape layout: 3 rows (2 dice + 2 dice + 1 dice)
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 DiceImage(
@@ -415,7 +442,7 @@ fun DiceGrid(
             }
         }
     } else {
-        // Original portrait layout (3 dice on top, 2 below)
+        // Portrait layout: 2 rows (3 dice + 2 dice)
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 for (i in 0 until 3) {
@@ -444,17 +471,18 @@ fun DiceGrid(
     }
 }
 
-// Updated Dice Image Component with configurable size
+
 @Composable
 fun DiceImage(
-    number: Int,
-    isSelected: Boolean,
-    isSelectable: Boolean,
-    onClick: () -> Unit,
-    size: androidx.compose.ui.unit.Dp
+    number: Int,  // Dice face value (1 to 6)
+    isSelected: Boolean, // Whether this dice is selected by the player
+    isSelectable: Boolean, // Whether dice selection is currently allowed
+    onClick: () -> Unit,  // Callback when dice is clicked
+    size: androidx.compose.ui.unit.Dp    // Dice size (varies for landscape/portrait)
 ) {
     Box(
         modifier = Modifier
+            // Make dice clickable only if selectable
             .then(
                 if (isSelectable)
                     Modifier.clickable(onClick = onClick)
@@ -463,7 +491,7 @@ fun DiceImage(
             )
     ) {
         Image(
-            painter = painterResource(id = getDiceImage(number)),
+            painter = painterResource(id = getDiceImage(number)),  // Load dice image based on value
             contentDescription = "Dice $number",
             modifier = Modifier
                 .size(size)
@@ -480,7 +508,7 @@ fun DiceImage(
     }
 }
 
-// Returns the correct drawable for a dice value
+// Returns the correct dice image resource based on dice number
 fun getDiceImage(number: Int): Int {
     return when (number) {
         1 -> R.drawable.die1
@@ -489,15 +517,15 @@ fun getDiceImage(number: Int): Int {
         4 -> R.drawable.die4
         5 -> R.drawable.die5
         6 -> R.drawable.die6
-        else -> R.drawable.die1
+        else -> R.drawable.die1  // Fallback to die1 if out of range
     }
 }
 
-// Pixel-Style Text (Dark Pink Border + Light Pink Inner)
+
 @Composable
 fun PixelText(text: String, fontSize: androidx.compose.ui.unit.TextUnit) {
     Box {
-        // Outer Border
+        // Bottom layer: dark pink for border/shadow effect
         Text(
             text = text,
             fontSize = fontSize,
@@ -506,7 +534,8 @@ fun PixelText(text: String, fontSize: androidx.compose.ui.unit.TextUnit) {
             style = TextStyle(letterSpacing = 2.sp),
             modifier = Modifier.offset(2.dp, 2.dp)
         )
-        // Inner Text
+
+        // Top layer: light pink foreground text
         Text(
             text = text,
             fontSize = fontSize,
@@ -517,7 +546,7 @@ fun PixelText(text: String, fontSize: androidx.compose.ui.unit.TextUnit) {
     }
 }
 
-// Pixel-Style Button
+
 @Composable
 fun PixelButton(
     text: String,
@@ -526,37 +555,71 @@ fun PixelButton(
 ) {
     Box(
         modifier = Modifier
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)  // Enable/disable click based on state
             .padding(12.dp)
-            .alpha(if (enabled) 1f else 0.5f)
+            .alpha(if (enabled) 1f else 0.5f)  // Visually fade when disabled
     ) {
-        PixelText(text, fontSize = 20.sp)
+        PixelText(text, fontSize = 20.sp) // Use pixelated text inside button
     }
 }
 
 // Computer AI function
 fun computerTurn(computerDice: MutableState<List<Int>>, computerScore: MutableState<Int>) {
-    // Simple AI strategy: roll up to 3 times, keeping track of the best rolls
-    var bestRoll = computerDice.value
-    var bestScore = bestRoll.sum()
+    var currentDice = List(5) { Random.nextInt(1, 7) } // First roll
+    val diceToKeep = MutableList(5) { false } // Track which dice to keep
 
-    repeat(2) { // Computer will try up to 2 rerolls
-        val newRoll = List(5) { Random.nextInt(1, 7) }
-        val newScore = newRoll.sum()
+    val rerollAttempts = Random.nextInt(0, 3)  // Random number of rerolls (0–2)
 
-        if (newScore > bestScore) {
-            bestRoll = newRoll
-            bestScore = newScore
+    repeat(rerollAttempts) {
+        for (i in 0 until 5) {
+
+            diceToKeep[i] = Random.nextBoolean()
+        }
+
+        // Reroll only unkept dice
+        currentDice = currentDice.mapIndexed { index, value ->
+            if (diceToKeep[index]) value else Random.nextInt(1, 7)  // Randomly decide which dice to keep
         }
     }
 
-    computerDice.value = bestRoll
-    computerScore.value += bestScore
+    computerDice.value = currentDice // Update UI with final dice result
+    computerScore.value += currentDice.sum() // Add to total computer score
 }
 
-// Extension function to add alpha support for Modifier
+// Modifier extension to apply alpha (transparency)
 fun Modifier.alpha(alpha: Float): Modifier {
     return this.then(
         Modifier.graphicsLayer(alpha = alpha)
     )
 }
+
+
+
+// --------------------- COMPUTER AI STRATEGY DOCUMENTATION ---------------------
+/*
+    STRATEGY OVERVIEW:
+    This AI follows a randomized strategy for its turn.
+    - It starts with an initial roll of 5 dice.
+    - Then, it performs 0 to 2 rerolls — the number is chosen randomly.
+    - In each reroll, the AI randomly decides which dice to keep (via `Random.nextBoolean()`).
+    - Only the unkept dice are rerolled in the next round.
+    - After the final roll, the sum of the dice is added to the computer’s total score.
+
+    JUSTIFICATION:
+    - This approach introduces unpredictability, simulating a human player's uncertain decisions.
+    - It satisfies the coursework requirement that the AI must **not always use all 3 rolls**, and that dice retention decisions must be **random**.
+    - It's fair and simple, but still allows for decent variation in game outcomes.
+
+    ADVANTAGES:
+    - Meets the exact coursework specification for a randomized reroll strategy.
+    - Produces natural-looking, non-deterministic outcomes — feels realistic.
+    - Keeps the game challenging and balanced, without being unbeatable.
+
+    DISADVANTAGES:
+    - Not optimized for maximum scoring (e.g., doesn't keep high-value dice on purpose).
+    - May sometimes make "bad" decisions (e.g., keeping low dice like 1 or 2 randomly).
+    - Doesn’t adapt based on human player's score or game state — no strategic awareness.
+
+    Overall, this implementation is simple, effective, and aligned with assignment rules.
+*/
+//
